@@ -6,21 +6,35 @@ from hardware.temperature import Temperature
 
 
 class App(MDApp):
-    video = Video(source="resources/countdown_test.mp4", state='play', options={'allow_stretch': True})
-    video_file_length_seconds = 81
-    temperature = Temperature()
+    _video = Video(source="resources/countdown_test.mp4", state='play', options={'allow_stretch': True})
+    _video_file_length_seconds = 81
+    _temperature = Temperature()
+    _last_value = -1
 
     def build(self):
         self.theme_cls.theme_style = "Dark"
         self.theme_cls.primary_palette = "BlueGray"
         Clock.schedule_interval(self.position, 1)
-        return self.video
+        return self._video
 
     def position(self, dt):
-        current_temperature = self.temperature.fetch_temperature()
+        current_temperature = self._temperature.fetch_temperature()
         print(f"Current GPU temperature: {current_temperature}")
-        if self.video.loaded:
-            self.video.seek((100 - current_temperature) / self.video_file_length_seconds)
+        if self._video.loaded:
+            if self.temperature_changed(current_temperature):
+                self._video.seek((100 - current_temperature) / self._video_file_length_seconds)
+                self._video.state = 'play'
+                Clock.schedule_once(self.pause_video, 0.5)
+
+    def pause_video(self, dt):
+        self._video.state = 'pause'
+
+    def temperature_changed(self, current_value):
+        if current_value != self._last_value:
+            self._last_value = current_value
+            return True
+        else:
+            return False
 
 
 if __name__ == '__main__':

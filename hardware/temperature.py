@@ -2,8 +2,8 @@ import clr
 
 
 class Temperature(object):
-    gpu = None
-    temperature_sensor = None
+    _gpu = None
+    _temperature_sensor = None
 
     def __init__(self):
         clr.AddReference("hardware/resources/OpenHardwareMonitorLib")
@@ -16,14 +16,14 @@ class Temperature(object):
         gpu_list = computer.Hardware
         if len(gpu_list) == 0:
             raise Exception("No GPU Hardware found")
-        self.gpu = gpu_list[0]
-        print(f"GPU Hardware found: {self.gpu.Name}")
-        for sensor in self.gpu.Sensors:
+        self._gpu = gpu_list[0]
+        print(f"GPU Hardware found: {self._gpu.Name}")
+        for sensor in self._gpu.Sensors:
             if sensor.SensorType == 2:  # temperature
-                self.temperature_sensor = sensor
-        if self.temperature_sensor is None:
+                self._temperature_sensor = sensor
+        if self._temperature_sensor is None:
             raise Exception("No GPU temperature sensor found")
 
     def fetch_temperature(self):
-        self.gpu.Update()
-        return self.temperature_sensor.Value
+        self._gpu.Update()
+        return int(self._temperature_sensor.Value)
