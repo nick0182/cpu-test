@@ -19,7 +19,7 @@ class App(MDApp):
 
     def position(self, dt):
         current_temperature = self._temperature.fetch_temperature()
-        print(f"Current GPU temperature: {current_temperature}")
+        print(f"Current CPU temperature: {current_temperature}")
         if self._video.loaded:
             if self.temperature_changed(current_temperature):
                 self._video.seek((100 - current_temperature) / self._video_file_length_seconds)

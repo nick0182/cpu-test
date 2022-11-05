@@ -2,8 +2,6 @@ import clr
 
 
 class Temperature(object):
-    _gpu = None
-    _temperature_sensor = None
 
     def __init__(self):
         clr.AddReference("hardware/resources/OpenHardwareMonitorLib")
@@ -11,19 +9,27 @@ class Temperature(object):
         from OpenHardwareMonitor import Hardware
 
         computer = Hardware.Computer()
-        computer.GPUEnabled = True
+        computer.CPUEnabled = True
         computer.Open()
         gpu_list = computer.Hardware
         if len(gpu_list) == 0:
-            raise Exception("No GPU Hardware found")
-        self._gpu = gpu_list[0]
-        print(f"GPU Hardware found: {self._gpu.Name}")
-        for sensor in self._gpu.Sensors:
-            if sensor.SensorType == 2:  # temperature
-                self._temperature_sensor = sensor
-        if self._temperature_sensor is None:
-            raise Exception("No GPU temperature sensor found")
+            raise Exception("No CPU Hardware found")
+        self._cpu = gpu_list[0]
+        print(f"CPU Hardware found: {self._cpu.Name}")
+        self._temperature_sensor = None
 
     def fetch_temperature(self):
-        self._gpu.Update()
-        return int(self._temperature_sensor.Value)
+        self._cpu.Update()
+        if self._temperature_sensor is None:
+            self._resolve_temperature_sensor()
+            return 0
+        else:
+            return int(self._temperature_sensor.Value)
+
+    # runs only if PyCharm is run as admin
+    def _resolve_temperature_sensor(self):
+        for sensor in self._cpu.Sensors:
+            if sensor.SensorType == 2:  # temperature
+                print(f"got cpu temperature sensor: {sensor.Name}")
+                self._temperature_sensor = sensor
+                return
