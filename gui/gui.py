@@ -6,10 +6,14 @@ from hardware.temperature import Temperature
 
 
 class App(MDApp):
-    _video = Video(source="resources/countdown_test.mp4", state='play', options={'allow_stretch': True})
-    _video_file_length_seconds = 81
-    _temperature = Temperature()
-    _last_value = -1
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._video = Video(source="resources/countdown_test.mp4", state='play', options={'allow_stretch': True})
+        self._video_file_length_seconds = 81
+        self._temperature = Temperature()
+        self._countdown = 0
+        self._current_temperature = -1
 
     def build(self):
         self.theme_cls.theme_style = "Dark"
@@ -18,23 +22,13 @@ class App(MDApp):
         return self._video
 
     def position(self, dt):
-        current_temperature = self._temperature.fetch_temperature()
-        print(f"Current CPU temperature: {current_temperature}")
+        if self._countdown == 0:
+            self._current_temperature = self._temperature.fetch_temperature()
+            self._countdown = 4
         if self._video.loaded:
-            if self.temperature_changed(current_temperature):
-                self._video.seek((100 - current_temperature) / self._video_file_length_seconds)
-                self._video.state = 'play'
-                Clock.schedule_once(self.pause_video, 0.5)
-
-    def pause_video(self, dt):
-        self._video.state = 'pause'
-
-    def temperature_changed(self, current_value):
-        if current_value != self._last_value:
-            self._last_value = current_value
-            return True
-        else:
-            return False
+            print(f"Countdown: {self._countdown}; Current CPU temperature: {self._current_temperature}")
+            self._video.seek((100 - self._current_temperature) / self._video_file_length_seconds)
+        self._countdown -= 1
 
 
 if __name__ == '__main__':

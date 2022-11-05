@@ -22,11 +22,8 @@ class Temperature(object):
         self._cpu.Update()
         if self._temperature_sensor is None:
             self._resolve_temperature_sensor()
-            return 0
-        else:
-            return int(self._temperature_sensor.Value)
+        return int(self._temperature_sensor.Value)
 
-    # runs only if PyCharm is run as admin
     def _resolve_temperature_sensor(self):
         for sensor in self._cpu.Sensors:
             if sensor.SensorType == 2:  # temperature
