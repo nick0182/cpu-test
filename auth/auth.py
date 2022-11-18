@@ -1,42 +1,55 @@
 import threading
+from base64 import urlsafe_b64encode
+from hashlib import sha256
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from webbrowser import open
 from os import environ
+from secrets import token_urlsafe
 from sys import exit
-
-
-def parse_auth_code(path):
-    return path.split("=")[1]
+from webbrowser import open
+from util import search_code_path
 
 
 class Auth:
 
-    # TODO support PKCE flow see https://github.com/googlesamples/oauth-apps-for-windows/blob/master/OAuthConsoleApp/OAuthConsoleApp/Program.cs
     def __init__(self) -> None:
         self._auth_endpoint = environ['AUTH_ENDPOINT']
         print(f"Auth endpoint: {self._auth_endpoint}")
+        self._client_id = environ['CLIENT_ID']
         self._server_ports = map(lambda p: int(p), environ['HTTP_SERVER_PORTS'].split(","))
-        http_server = None
+        print(f"Http server ports: {self._server_ports}")
+        self._http_server = self._setupHttpServer()
+        self._server_port = self._http_server.server_port
+        self._state = token_urlsafe(32)
+        self._codeVerifier = token_urlsafe(32)
+        self._code_challenge = self._hash_code_challenge()
+
+    def _setupHttpServer(self):
         for port in self._server_ports:
             try:
                 print(f"Trying to run http server on port: {port}")
                 http_server = HTTPServer(('localhost', port), AuthRequestHandler)
-                break
+                print(f"Server started at {http_server.server_address}")
+                return http_server
             except OSError:
                 print(f"port {port} is busy. Trying next one...")
-        if http_server is None:
-            print(f"Failed to start http server on any of provided ports. Exiting")
-            exit(1)
-        self._http_server = http_server
-        print(f"Server started at {self._http_server.server_address}")
-        self._server_port = self._http_server.server_port
+        print(f"Failed to start http server on any of provided ports. Exiting...")
+        exit(1)
+
+    def _hash_code_challenge(self):
+        hashed = sha256(self._codeVerifier.encode(encoding='ascii')).digest()
+        encoded = urlsafe_b64encode(hashed)
+        return encoded.decode('ascii')
 
     def start_auth_flow(self):
         self._open_auth_request_in_browser()
         self._run_http_server()
 
     def _open_auth_request_in_browser(self):
-        open(f"{self._auth_endpoint}" + f"http://localhost:{self._server_port}")
+        redirect_uri = f"http://localhost:{self._server_port}"
+        login_url = "{}?response_type=code&scope=aws.cognito.signin.user.admin+email+openid+phone+profile" \
+                    "&redirect_uri={}&client_id={}&state={}&code_challenge={}&code_challenge_method=S256"\
+            .format(self._auth_endpoint, redirect_uri, self._client_id, self._state, self._code_challenge)
+        open(login_url)
 
     def _run_http_server(self):
         try:
@@ -52,8 +65,11 @@ class Auth:
 class AuthRequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
-        auth_code = parse_auth_code(self.path)
-        print(f"Got auth code: {auth_code}")
+        path = self.path
+        code = search_code_path(path, "code")
+        state = search_code_path(path, "state")
+        print(f"Got code: {code}")
+        print(f"Got state: {state}")
         # TODO: do not handle /favicon.ico
         self.send_response(200, "Response OK")
         self.send_header("Content-type", "text/html")
@@ -63,6 +79,5 @@ class AuthRequestHandler(BaseHTTPRequestHandler):
         threading.Thread(target=self.server.shutdown, daemon=True).start()
 
 
-# run with AUTH_ENDPOINT and HTTP_SERVER_PORTS env variables
 if __name__ == '__main__':
     Auth().start_auth_flow()
