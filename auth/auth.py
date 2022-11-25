@@ -1,83 +1,86 @@
 import threading
-from base64 import urlsafe_b64encode
-from hashlib import sha256
+from functools import partial
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from os import environ
-from secrets import token_urlsafe
 from sys import exit
 from webbrowser import open
-from util import search_code_path
 
-
-class Auth:
-
-    def __init__(self) -> None:
-        self._auth_endpoint = environ['AUTH_ENDPOINT']
-        print(f"Auth endpoint: {self._auth_endpoint}")
-        self._client_id = environ['CLIENT_ID']
-        self._server_ports = map(lambda p: int(p), environ['HTTP_SERVER_PORTS'].split(","))
-        print(f"Http server ports: {self._server_ports}")
-        self._http_server = self._setupHttpServer()
-        self._server_port = self._http_server.server_port
-        self._state = token_urlsafe(32)
-        self._codeVerifier = token_urlsafe(32)
-        self._code_challenge = self._hash_code_challenge()
-
-    def _setupHttpServer(self):
-        for port in self._server_ports:
-            try:
-                print(f"Trying to run http server on port: {port}")
-                http_server = HTTPServer(('localhost', port), AuthRequestHandler)
-                print(f"Server started at {http_server.server_address}")
-                return http_server
-            except OSError:
-                print(f"port {port} is busy. Trying next one...")
-        print(f"Failed to start http server on any of provided ports. Exiting...")
-        exit(1)
-
-    def _hash_code_challenge(self):
-        hashed = sha256(self._codeVerifier.encode(encoding='ascii')).digest()
-        encoded = urlsafe_b64encode(hashed)
-        return encoded.decode('ascii')
-
-    def start_auth_flow(self):
-        self._open_auth_request_in_browser()
-        self._run_http_server()
-
-    def _open_auth_request_in_browser(self):
-        redirect_uri = f"http://localhost:{self._server_port}"
-        login_url = "{}?response_type=code&scope=aws.cognito.signin.user.admin+email+openid+phone+profile" \
-                    "&redirect_uri={}&client_id={}&state={}&code_challenge={}&code_challenge_method=S256"\
-            .format(self._auth_endpoint, redirect_uri, self._client_id, self._state, self._code_challenge)
-        open(login_url)
-
-    def _run_http_server(self):
-        try:
-            self._http_server.serve_forever()
-        except KeyboardInterrupt:
-            print("Program interrupted by user")
-            pass
-        finally:
-            print("Closing server...")
-            self._http_server.server_close()
+from auth_context import AuthContext
+from util import search_code_path, format_redirect_uri
+from auth_token_exchange import exchangeCodeForToken
 
 
 class AuthRequestHandler(BaseHTTPRequestHandler):
 
+    def __init__(self, auth_flow_context, *args, **kwargs):
+        self._auth_context = auth_flow_context
+        super().__init__(*args, **kwargs)
+
     def do_GET(self):
         path = self.path
-        code = search_code_path(path, "code")
-        state = search_code_path(path, "state")
-        print(f"Got code: {code}")
-        print(f"Got state: {state}")
+        incoming_code = search_code_path(path, "code")
+        incoming_state = search_code_path(path, "state")
+        print(f"Got code: {incoming_code}")
+        print(f"Got state: {incoming_state}")
         # TODO: do not handle /favicon.ico
-        self.send_response(200, "Response OK")
-        self.send_header("Content-type", "text/html")
-        self.end_headers()
-        self.wfile.write(bytes("<html><head><title>Successful authentication</title></head>", "utf-8"))
-        self.wfile.write(bytes("<body><h2>Successful login. You can return to app</h2></body></html>", "utf-8"))
+        if self._auth_context.get_state() != incoming_state:
+            print(f"Received request with invalid PKCE state")
+            self.send_response(200)
+            self.send_header("Content-type", "text/html")
+            self.end_headers()
+            self.wfile.write(bytes("<html><head><title>Authorization failed</title></head>", "utf-8"))
+            self.wfile.write(bytes("<body><h2>Authorization failed</h2></body></html>", "utf-8"))
+        else:
+            self.send_response(200, "Response OK")
+            self.send_header("Content-type", "text/html")
+            self.end_headers()
+            self.wfile.write(bytes("<html><head><title>Successful authentication</title></head>", "utf-8"))
+            self.wfile.write(bytes("<body><h2>Successful login. You can return to app</h2></body></html>", "utf-8"))
+            exchangeCodeForToken(self._auth_context, format_redirect_uri(self.server.server_address[1]), incoming_code)
         threading.Thread(target=self.server.shutdown, daemon=True).start()
 
 
+def open_auth_request_in_browser(server_port, auth_flow_context):
+    auth_host = auth_flow_context.get_auth_host()
+    login_path = auth_flow_context.get_login_path()
+    redirect_uri = format_redirect_uri(server_port)
+    client_id = auth_flow_context.get_client_id()
+    state = auth_flow_context.get_state()
+    code_challenge = auth_flow_context.get_code_challenge()
+    login_url = "https://{}{}?response_type=code&scope=aws.cognito.signin.user.admin+email+openid+phone+profile" \
+                "&redirect_uri={}&client_id={}&state={}&code_challenge={}&code_challenge_method=S256" \
+        .format(auth_host, login_path, redirect_uri, client_id, state, code_challenge)
+    open(login_url)
+
+
+def create_http_server(ports, auth_flow_context):
+    for port in ports:
+        try:
+            print(f"Trying to run http server on port: {port}")
+            server = HTTPServer(('localhost', port), partial(AuthRequestHandler, auth_flow_context))
+            print(f"Server started at {server.server_address}")
+            return server
+        # TODO: handle other possible OSError failures
+        except OSError:
+            print(f"port {port} is busy. Trying next one...")
+    print(f"Failed to start http server on any of provided ports. Exiting...")
+    exit(1)
+
+
+def run_http_server(server):
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("Program interrupted by user")
+        pass
+    finally:
+        print("Closing server...")
+        server.server_close()
+
+
 if __name__ == '__main__':
-    Auth().start_auth_flow()
+    auth_context = AuthContext()
+    server_ports = map(lambda p: int(p), environ['HTTP_SERVER_PORTS'].split(","))
+    auth_server = create_http_server(server_ports, auth_context)
+    open_auth_request_in_browser(auth_server.server_port, auth_context)
+    run_http_server(auth_server)
