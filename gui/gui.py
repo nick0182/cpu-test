@@ -1,4 +1,7 @@
-from kivy.clock import Clock
+import threading
+import time
+
+from kivy.clock import Clock, mainthread
 from kivy.uix.button import Button
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.screenmanager import ScreenManager, Screen
@@ -6,6 +9,7 @@ from kivy.uix.video import Video
 from kivymd.app import MDApp
 
 from hardware.temperature import Temperature
+from auth.auth import authenticate_user
 
 
 class HolotorScreenManager(ScreenManager):
@@ -29,7 +33,12 @@ class VideoScreen(Screen):
     def __init__(self, **kw):
         super().__init__(**kw)
         self.name = "Video"
-        self.add_widget(VideoLayout())
+        self._video_layout = VideoLayout()
+        self.add_widget(self._video_layout)
+
+    def on_pre_enter(self, *args):
+        print("Switching to video")
+        self._video_layout.start()
 
 
 class LoginLayout(GridLayout):
@@ -45,22 +54,28 @@ class LoginButton(Button):
     def __init__(self, screen_manager):
         super().__init__(text="Login", font_size=64)
         self._sm = screen_manager
+        self.bind(on_press=self.login)
 
-    def on_release(self):
+    def login(self, dt):
         print("Login process started")
+        threading.Thread(target=authenticate_user, args=[self.login_success], daemon=True).start()
+
+    def login_success(self, dt):
+        print("Login success!")
         self._sm.current = "Video"
 
 
 class VideoLayout(Video):
 
     def __init__(self):
-        super().__init__(source="resources/countdown_test.mp4", state='play', options={'allow_stretch': True})
+        super().__init__(source="resources/countdown_test.mp4", options={'allow_stretch': True})
         self._video_file_length_seconds = 81
         self._temperature = Temperature()
         self._countdown = 0
         self._current_temperature = -1
 
     def start(self):
+        self.state = 'play'
         Clock.schedule_interval(self._position, 1)
 
     def _position(self, dt):

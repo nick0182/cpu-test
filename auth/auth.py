@@ -5,15 +5,26 @@ from os import environ
 from sys import exit
 from webbrowser import open
 
-from auth_context import AuthContext
-from util import search_code_path, format_redirect_uri
-from auth_token_exchange import exchangeCodeForToken
+from kivy.clock import Clock
+
+from auth.auth_context import AuthContext
+from auth.auth_token_exchange import exchangeCodeForToken
+from auth.util import search_code_path, format_redirect_uri
+
+
+def authenticate_user(callback=None):
+    auth_context = AuthContext()
+    server_ports = map(lambda p: int(p), environ['HTTP_SERVER_PORTS'].split(","))
+    auth_server = create_http_server(server_ports, auth_context, callback)
+    open_auth_request_in_browser(auth_server.server_port, auth_context)
+    run_http_server(auth_server)
 
 
 class AuthRequestHandler(BaseHTTPRequestHandler):
 
-    def __init__(self, auth_flow_context, *args, **kwargs):
+    def __init__(self, auth_flow_context, callback, *args, **kwargs):
         self._auth_context = auth_flow_context
+        self._callback = callback
         super().__init__(*args, **kwargs)
 
     def do_GET(self):
@@ -37,6 +48,7 @@ class AuthRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(bytes("<html><head><title>Successful authentication</title></head>", "utf-8"))
             self.wfile.write(bytes("<body><h2>Successful login. You can return to app</h2></body></html>", "utf-8"))
             exchangeCodeForToken(self._auth_context, format_redirect_uri(self.server.server_address[1]), incoming_code)
+        Clock.schedule_once(self._callback, -1)
         threading.Thread(target=self.server.shutdown, daemon=True).start()
 
 
@@ -53,11 +65,11 @@ def open_auth_request_in_browser(server_port, auth_flow_context):
     open(login_url)
 
 
-def create_http_server(ports, auth_flow_context):
+def create_http_server(ports, auth_flow_context, callback):
     for port in ports:
         try:
             print(f"Trying to run http server on port: {port}")
-            server = HTTPServer(('localhost', port), partial(AuthRequestHandler, auth_flow_context))
+            server = HTTPServer(('localhost', port), partial(AuthRequestHandler, auth_flow_context, callback))
             print(f"Server started at {server.server_address}")
             return server
         # TODO: handle other possible OSError failures
@@ -79,8 +91,4 @@ def run_http_server(server):
 
 
 if __name__ == '__main__':
-    auth_context = AuthContext()
-    server_ports = map(lambda p: int(p), environ['HTTP_SERVER_PORTS'].split(","))
-    auth_server = create_http_server(server_ports, auth_context)
-    open_auth_request_in_browser(auth_server.server_port, auth_context)
-    run_http_server(auth_server)
+    authenticate_user()
