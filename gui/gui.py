@@ -1,15 +1,15 @@
 import threading
-import time
 
-from kivy.clock import Clock, mainthread
+from kivy.clock import Clock
 from kivy.uix.button import Button
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.video import Video
 from kivymd.app import MDApp
 
-from hardware.temperature import Temperature
 from auth.auth import authenticate_user
+from hardware.temperature import Temperature
+from dotenv import load_dotenv
 
 
 class HolotorScreenManager(ScreenManager):
@@ -97,4 +97,5 @@ class Holotor(MDApp):
 
 
 if __name__ == '__main__':
+    load_dotenv('resources/.env')
     Holotor().run()
