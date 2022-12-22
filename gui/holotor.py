@@ -1,15 +1,18 @@
 import threading
 
 from kivy.clock import Clock
-from kivy.uix.button import Button
-from kivy.uix.gridlayout import GridLayout
+from kivy.core.window import Window
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.video import Video
 from kivymd.app import MDApp
+from kivymd.uix.button import MDRectangleFlatButton
+from kivymd.uix.floatlayout import MDFloatLayout
+
+from dotenv import load_dotenv
+from gui.colors import colors
 
 from auth.auth import authenticate_user
 from hardware.temperature import Temperature
-from dotenv import load_dotenv
 
 
 class HolotorScreenManager(ScreenManager):
@@ -41,18 +44,19 @@ class VideoScreen(Screen):
         self._video_layout.start()
 
 
-class LoginLayout(GridLayout):
+class LoginLayout(MDFloatLayout):
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
-        self.cols = 1
         self.add_widget(LoginButton(screen_manager))
 
 
-class LoginButton(Button):
+class LoginButton(MDRectangleFlatButton):
 
+    # see https://kivymd.readthedocs.io/en/1.1.1/themes/theming/#kivymd.theming.ThemeManager.accent_color
     def __init__(self, screen_manager):
-        super().__init__(text="Login", font_size=64)
+        super().__init__(text="Login", font_size=32, font_name='resources/Jua-Regular.ttf', size_hint=(.3, .3), pos_hint={'x': .35, 'y': .35})
+        self.line_color = "A87575"
         self._sm = screen_manager
         self.bind(on_press=self.login)
 
@@ -91,8 +95,10 @@ class VideoLayout(Video):
 class Holotor(MDApp):
 
     def build(self):
+        self.theme_cls.colors = colors
         self.theme_cls.theme_style = "Dark"
         self.theme_cls.primary_palette = "BlueGray"
+        Window.size = (800, 600)
         return HolotorScreenManager()
 
 
