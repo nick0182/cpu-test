@@ -1,0 +1,158 @@
+#:import colors gui.colors.colors
+#:set section_bg_color colors['Dark']['Section']
+#:set holotor_label_text_color colors['Red']['A800']
+#:set font_name_jua "resources/Jua-Regular.ttf"
+
+<LoginScreen>:
+    MDFloatLayout:
+        MDRectangleFlatButton:
+            text: "Login"
+            font_size: 32
+            font_name: font_name_jua
+            size_hint: (.3, .3)
+            pos_hint: {'x': .35, 'y': .35}
+            line_color: "A87575"
+            on_release: root.manager.login()
+
+<HolotorsScreen>:
+    MDBoxLayout:
+        id: 'main_layout'
+        spacing: 10
+        orientation: 'vertical'
+        MDBoxLayout:
+            id: 'top_bar_layout'
+            md_bg_color: section_bg_color
+            orientation: 'horizontal'
+            spacing: 260
+            padding: 20, 0, 20, 0
+            size_hint_y: None
+            size: 800, 50
+            pos_hint: {'top': 1}
+            MDBoxLayout:
+                id: 'logo_layout'
+                orientation: 'horizontal'
+                pos_hint: {'left': 1}
+                padding: 0, 0, 13, 0
+                size_hint_x: None
+                size: 200, 50
+                MDBoxLayout:
+                    id: 'logo_label_layout'
+                    size: 120, 50
+                    padding: 20, 0, 0, 0
+                    MDLabel:
+                        text: 'Holotor'
+                        theme_text_color: 'Custom'
+                        text_color: holotor_label_text_color
+                        font_name: font_name_jua
+                        font_size: 24
+                MDIconButton:
+                    icon: "resources/menu-button-icon.png"
+                    icon_size: 24
+                    md_bg_color: section_bg_color
+            MDAnchorLayout:
+                anchor_x: 'right'
+                anchor_y: 'center'
+                MDTextField:
+                    id: search_field
+                    hint_text: 'Search...'
+                    mode: 'round'
+                    size_hint_x: None
+                    size: 300, 50
+                    font_name: font_name_jua
+                    font_name_hint_text: font_name_jua
+                MDIconButton:
+                    icon: "magnify"
+                    pos_hint: {"center_y": .5}
+                    pos: search_field.width - self.width + dp(8), 0
+                    on_release: print("Search icon released")
+        MDBoxLayout:
+            id: 'functional_layout'
+            spacing: 10
+            orientation: 'horizontal'
+            MDBoxLayout:
+                id: 'side_bar_layout'
+                orientation: 'vertical'
+                size_hint_x: None
+                size: 200, 540
+                md_bg_color: section_bg_color
+                MDBoxLayout:
+                    id: 'menu_label_layout'
+                    orientation: 'vertical'
+                    size: 200, 50
+                    padding: 75, 0, 0, 0
+                    size_hint_y: None
+                    MDLabel:
+                        text: 'Menu'
+                        theme_text_color: 'Custom'
+                        text_color: holotor_label_text_color
+                        font_name: font_name_jua
+                        font_size: 20
+                MDBoxLayout:
+                    id: 'menu_options_layout'
+            MDBoxLayout:
+                id: 'holotors_layout'
+                spacing: 10
+                orientation: 'vertical'
+                MDBoxLayout:
+                    id: 'holotors_header_layout'
+                    md_bg_color: section_bg_color
+                    orientation: 'horizontal'
+                    size_hint_y: None
+                    size: 590, 50
+                    MDBoxLayout:
+                        id: 'holotors_label_layout'
+                        orientation: 'horizontal'
+                        size: 150, 50
+                        padding: 40, 0, 0, 0
+                        size_hint_y: None
+                        MDLabel:
+                            text: 'Holotors'
+                            theme_text_color: 'Custom'
+                            text_color: holotor_label_text_color
+                            font_name: font_name_jua
+                            font_size: 20
+                MDGridLayout:
+                    id: 'holotors_tile_layout'
+                    md_bg_color: section_bg_color
+                    size: 590, 480
+                    rows: 3
+                    cols: 3
+                    MDAnchorLayout:
+                        HolotorTile:
+                            source: 'resources/countdown_test_thumbnail.png'
+                    MDAnchorLayout:
+                    MDAnchorLayout:
+                    MDAnchorLayout:
+                    MDAnchorLayout:
+                    MDAnchorLayout:
+                    MDAnchorLayout:
+                    MDAnchorLayout:
+                    MDAnchorLayout:
+
+
+<DisplayModal>:
+    size_hint: (None, None)
+    overlay_color: [0, 0, 0, 0]
+
+<DisplayLayout>:
+    orientation: 'vertical'
+    size_hint: (None, None)
+    padding: 0, 0, 0, 10
+    spacing: 10
+
+<DisplayButton>:
+    font_name: font_name_jua
+    font_size: 12
+    size_hint: None, None
+    size: (150, 30)
+    md_bg_color: holotor_label_text_color
+    on_press: app.root.play_holotor(modal_view=self._modal_view, display=self._display)
+
+<VideoScreen>:
+    video_layout: video
+    on_pre_enter: self.start_video()
+
+    VideoLayout:
+        id: video
+        source: "resources/countdown_test.mp4"
+        options: {'allow_stretch': True}

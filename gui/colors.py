@@ -14,6 +14,7 @@ colors = {
         "A200": "FF5252",
         "A400": "FF1744",
         "A700": "D50000",
+        "A800": "F75757"
     },
     "Pink": {
         "50": "FCE4EC",
@@ -316,5 +317,6 @@ colors = {
         "Background": "2B2E36",
         "CardsDialogs": "212121",
         "FlatButtonDown": "999999",
+        "Section": "32363F"
     },
 }

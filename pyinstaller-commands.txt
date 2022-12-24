@@ -1,4 +1,7 @@
 1. copy all required modules and place them along with gui.spec file
 2. make python venv active by running 'Scrips/activate.ps1'
 3. run 'pyinstaller gui.spec'
-4. CAUTION there is a problem with ffpyplayer version 4.3.5 that fails the pyinstaller build. Stay at ver 4.3.4 for now
+4. copy opengl32.dll from C:\Users\blink\Documents\mesa-windows
+5. create gui.exe.local file
+
+CAUTION there is a problem with ffpyplayer version 4.3.5 that fails the pyinstaller build. Stay at version 4.3.4 for now

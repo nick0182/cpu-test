@@ -26,7 +26,7 @@ class Temperature(object):
 
     def _resolve_temperature_sensor(self):
         for sensor in self._cpu.Sensors:
-            if sensor.SensorType == 2:  # temperature
-                print(f"got cpu temperature sensor: {sensor.Name}")
+            if sensor.SensorType == sensor.SensorType.Temperature:  # temperature
+                print(f"Got cpu temperature sensor: {sensor.Name}")
                 self._temperature_sensor = sensor
                 return
