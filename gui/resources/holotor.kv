@@ -119,7 +119,11 @@
                     cols: 3
                     MDAnchorLayout:
                         HolotorTile:
+                            anim_delay: 0.05
                             source: 'resources/countdown_test_thumbnail.png'
+                            on_enter: self.source="resources/countdown_test.gif"
+                            on_leave: self.source="resources/countdown_test_thumbnail.png"
+                            on_release: app.root.play_holotor()
                     MDAnchorLayout:
                     MDAnchorLayout:
                     MDAnchorLayout:
@@ -146,13 +150,24 @@
     size_hint: None, None
     size: (150, 30)
     md_bg_color: holotor_label_text_color
-    on_press: app.root.play_holotor(modal_view=self._modal_view, display=self._display)
 
 <VideoScreen>:
-    video_layout: video
+    holotor_video: video
+    fullscreen_button: fs_button
     on_pre_enter: self.start_video()
+    on_pre_leave: self.stop_video()
 
     VideoLayout:
-        id: video
-        source: "resources/countdown_test.mp4"
-        options: {'allow_stretch': True}
+        HolotorVideo:
+            id: video
+            source: "resources/countdown_test.mp4"
+            options: {'allow_stretch': True}
+        FullscreenButton:
+            id: fs_button
+            size_hint_x: None
+            size_hint_y: None
+            pos_hint: {'right': .95, 'top': .95}
+            opacity: 0
+            icon: "resources/expand.png"
+            icon_size: 36
+            on_press: self.resize_screen()
